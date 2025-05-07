@@ -5,7 +5,14 @@ import { Storage } from './js/storage.js';
 // Initialize Pyodide
 async function initPyodide() {
     try {
-        window.pyodide = await loadPyodide({
+        // Show loading indicator
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        if (loadingIndicator) {
+            loadingIndicator.hidden = false;
+        }
+
+        // Configure Pyodide
+        const pyodideConfig = {
             indexURL: "https://cdn.jsdelivr.net/pyodide/v0.24.1/full/",
             fullStdLib: true,
             stdout: (msg) => {
@@ -20,13 +27,31 @@ async function initPyodide() {
                     outputDisplay.textContent += `Error: ${msg}`;
                 }
             }
-        });
+        };
+
+        // Load Pyodide
+        window.pyodide = await loadPyodide(pyodideConfig);
+
+        // Load required Python packages
+        await window.pyodide.loadPackage(['numpy', 'matplotlib']);
+
+        // Hide loading indicator
+        if (loadingIndicator) {
+            loadingIndicator.hidden = true;
+        }
+
         console.log('Pyodide loaded successfully');
     } catch (error) {
         console.error('Failed to load Pyodide:', error);
         const outputDisplay = document.getElementById('outputDisplay');
         if (outputDisplay) {
             outputDisplay.textContent = 'Failed to load Python environment. Some features may be limited.';
+        }
+        
+        // Hide loading indicator
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        if (loadingIndicator) {
+            loadingIndicator.hidden = true;
         }
     }
 }
@@ -38,6 +63,25 @@ async function initApp() {
         const fileHandler = new FileHandler();
         const githubImporter = new GitHubImporter(fileHandler);
         const storage = new Storage();
+        
+        // Initialize theme
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'dark') {
+            document.body.classList.add('dark-theme');
+        }
+        
+        // Load saved files
+        const savedFiles = localStorage.getItem('savedFiles');
+        if (savedFiles) {
+            try {
+                const filesObj = JSON.parse(savedFiles);
+                Object.entries(filesObj).forEach(([name, content]) => {
+                    fileHandler.addFile(name, content);
+                });
+            } catch (error) {
+                console.error('Failed to load saved files:', error);
+            }
+        }
     } catch (error) {
         console.error('Failed to initialize app:', error);
     }
@@ -53,12 +97,12 @@ const body = document.body;
 function toggleTheme() {
     body.classList.toggle('dark-theme');
     localStorage.setItem('theme', body.classList.contains('dark-theme') ? 'dark' : 'light');
-}
-
-// Load saved theme
-const savedTheme = localStorage.getItem('theme');
-if (savedTheme === 'dark') {
-    body.classList.add('dark-theme');
+    
+    // Update Monaco Editor theme if it exists
+    if (window.monaco) {
+        const isDark = body.classList.contains('dark-theme');
+        monaco.editor.setTheme(isDark ? 'vs-dark' : 'vs');
+    }
 }
 
 themeToggle.addEventListener('click', toggleTheme);
@@ -67,12 +111,8 @@ themeToggle.addEventListener('click', toggleTheme);
 const dropZone = document.getElementById('dropZone');
 const fileInput = document.getElementById('fileInput');
 const uploadButton = document.getElementById('uploadButton');
-const fileList = document.getElementById('fileList');
-const contentDisplay = document.getElementById('contentDisplay');
-const outputDisplay = document.getElementById('outputDisplay');
 const saveButton = document.getElementById('saveButton');
-
-let files = new Map();
+const clearButton = document.getElementById('clearButton');
 
 // Drag and drop handlers
 dropZone.addEventListener('dragover', (e) => {
@@ -87,7 +127,10 @@ dropZone.addEventListener('dragleave', () => {
 dropZone.addEventListener('drop', (e) => {
     e.preventDefault();
     dropZone.classList.remove('dragover');
-    handleFiles(e.dataTransfer.files);
+    const fileHandler = window.fileHandler;
+    if (fileHandler) {
+        fileHandler.handleFiles(e.dataTransfer.files);
+    }
 });
 
 uploadButton.addEventListener('click', () => {
@@ -95,7 +138,32 @@ uploadButton.addEventListener('click', () => {
 });
 
 fileInput.addEventListener('change', (e) => {
-    handleFiles(e.target.files);
+    const fileHandler = window.fileHandler;
+    if (fileHandler) {
+        fileHandler.handleFiles(e.target.files);
+    }
+});
+
+// Save files
+saveButton.addEventListener('click', () => {
+    const fileHandler = window.fileHandler;
+    if (fileHandler) {
+        fileHandler.saveFiles();
+    }
+});
+
+// Clear all files
+clearButton.addEventListener('click', async () => {
+    const fileHandler = window.fileHandler;
+    if (fileHandler) {
+        const confirmed = await fileHandler.showConfirmation(
+            'Clear All Files',
+            'Are you sure you want to clear all files? This action cannot be undone.'
+        );
+        if (confirmed) {
+            fileHandler.clearFiles();
+        }
+    }
 });
 
 // GitHub import
@@ -112,7 +180,10 @@ importButton.addEventListener('click', async () => {
         
         const content = await response.text();
         const fileName = url.split('/').pop();
-        addFile(fileName, content);
+        const fileHandler = window.fileHandler;
+        if (fileHandler) {
+            fileHandler.addFile(fileName, content);
+        }
     } catch (error) {
         console.error('Error importing from GitHub:', error);
         alert('Failed to import file from GitHub');
@@ -124,105 +195,63 @@ function handleFiles(fileList) {
     Array.from(fileList).forEach(file => {
         const reader = new FileReader();
         reader.onload = (e) => {
-            addFile(file.name, e.target.result);
+            const fileHandler = window.fileHandler;
+            if (fileHandler) {
+                fileHandler.addFile(file.name, e.target.result);
+            }
         };
         reader.readAsText(file);
     });
 }
 
 function addFile(name, content) {
-    files.set(name, content);
-    updateFileList();
-    displayFile(name);
+    const fileHandler = window.fileHandler;
+    if (fileHandler) {
+        fileHandler.addFile(name, content);
+    }
 }
 
 function updateFileList() {
-    fileList.innerHTML = '';
-    files.forEach((_, name) => {
-        const li = document.createElement('li');
-        li.textContent = name;
-        li.addEventListener('click', () => displayFile(name));
-        fileList.appendChild(li);
-    });
+    const fileHandler = window.fileHandler;
+    if (fileHandler) {
+        fileHandler.updateFileList();
+    }
 }
 
 function displayFile(name) {
-    const content = files.get(name);
-    if (!content) return;
-
-    const extension = name.split('.').pop().toLowerCase();
-    
-    switch (extension) {
-        case 'md':
-            displayMarkdown(content);
-            break;
-        case 'py':
-            displayPython(content);
-            break;
-        case 'ipynb':
-            displayNotebook(content);
-            break;
-        default:
-            contentDisplay.textContent = content;
+    const fileHandler = window.fileHandler;
+    if (fileHandler) {
+        fileHandler.displayFile(name);
     }
 }
 
 function displayMarkdown(content) {
-    contentDisplay.innerHTML = marked.parse(content);
-    hljs.highlightAll();
+    const fileHandler = window.fileHandler;
+    if (fileHandler) {
+        fileHandler.displayMarkdown(content);
+    }
 }
 
 async function displayPython(content) {
-    contentDisplay.innerHTML = `<pre><code class="language-python">${content}</code></pre>`;
-    hljs.highlightAll();
-    
-    if (pyodide) {
-        try {
-            const result = await pyodide.runPythonAsync(content);
-            outputDisplay.textContent = result !== undefined ? result : '';
-        } catch (error) {
-            outputDisplay.textContent = `Error: ${error.message}`;
-        }
+    const fileHandler = window.fileHandler;
+    if (fileHandler) {
+        fileHandler.displayPython(content);
     }
 }
 
 function displayNotebook(content) {
-    try {
-        const notebook = JSON.parse(content);
-        let html = '';
-        
-        notebook.cells.forEach(cell => {
-            if (cell.cell_type === 'markdown') {
-                html += marked.parse(cell.source.join(''));
-            } else if (cell.cell_type === 'code') {
-                html += `<pre><code class="language-python">${cell.source.join('')}</code></pre>`;
-                if (cell.outputs && cell.outputs.length > 0) {
-                    html += '<div class="notebook-output">';
-                    cell.outputs.forEach(output => {
-                        if (output.text) {
-                            html += `<pre>${output.text.join('')}</pre>`;
-                        }
-                    });
-                    html += '</div>';
-                }
-            }
-        });
-        
-        contentDisplay.innerHTML = html;
-        hljs.highlightAll();
-    } catch (error) {
-        contentDisplay.textContent = 'Error parsing notebook';
+    const fileHandler = window.fileHandler;
+    if (fileHandler) {
+        fileHandler.displayNotebook(content);
     }
 }
 
 // Save files to localStorage
 saveButton.addEventListener('click', () => {
-    const filesObj = {};
-    files.forEach((content, name) => {
-        filesObj[name] = content;
-    });
-    localStorage.setItem('savedFiles', JSON.stringify(filesObj));
-    alert('Files saved successfully!');
+    const fileHandler = window.fileHandler;
+    if (fileHandler) {
+        fileHandler.saveFiles();
+    }
 });
 
 // Load saved files on startup

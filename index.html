@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cross-Origin-Opener-Policy" content="same-origin">
+    <meta http-equiv="Cross-Origin-Embedder-Policy" content="require-corp">
     <title>Code Viewer & Executor</title>
     <link rel="stylesheet" href="styles.css">
     <!-- Marked.js for Markdown rendering -->
@@ -11,22 +13,20 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/default.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
     <!-- Monaco Editor -->
-    <script>var require = { paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.36.1/min/vs' } };</script>
+    <script src="monaco-config.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.36.1/min/vs/loader.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.36.1/min/vs/editor/editor.main.nls.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.36.1/min/vs/editor/editor.main.js"></script>
-    <!-- Pyodide and its dependencies -->
+    <!-- Pyodide -->
     <script src="https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/stackframe@1.3.4/dist/stackframe.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/error-stack-parser@2.1.4/dist/error-stack-parser.min.js"></script>
 </head>
 <body class="light-theme">
     <header>
         <h1>Code Viewer & Executor</h1>
         <div class="controls">
-            <button id="themeToggle" aria-label="Toggle theme" title="Switch to dark mode">Toggle Theme</button>
-            <button id="saveButton" aria-label="Save files">Save Files</button>
-            <button id="clearButton" aria-label="Clear all files">Clear All</button>
+            <button id="themeToggle" name="themeToggle" aria-label="Toggle theme" title="Switch to dark mode">Toggle Theme</button>
+            <button id="saveButton" name="saveButton" aria-label="Save files">Save Files</button>
+            <button id="clearButton" name="clearButton" aria-label="Clear all files">Clear All</button>
         </div>
     </header>
 
@@ -34,12 +34,12 @@
         <div class="file-input-container">
             <div id="dropZone" class="drop-zone" role="region" aria-label="File drop zone">
                 <p>Drag and drop files here or</p>
-                <input type="file" id="fileInput" multiple accept=".ipynb,.py,.md" aria-label="Choose files">
-                <button id="uploadButton">Choose Files</button>
+                <input type="file" id="fileInput" name="fileInput" multiple accept=".ipynb,.py,.md" aria-label="Choose files">
+                <button id="uploadButton" name="uploadButton">Choose Files</button>
             </div>
             <div class="github-import">
-                <input type="text" id="githubUrl" placeholder="Enter GitHub file URL" aria-label="GitHub URL">
-                <button id="importButton">Import from GitHub</button>
+                <input type="text" id="githubUrl" name="githubUrl" placeholder="Enter GitHub file URL" aria-label="GitHub URL">
+                <button id="importButton" name="importButton">Import from GitHub</button>
             </div>
         </div>
 
