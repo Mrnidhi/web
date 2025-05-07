@@ -10,8 +10,10 @@ export class FileHandler {
         this.fileList = document.getElementById('fileList');
         this.contentDisplay = document.getElementById('contentDisplay');
         this.outputDisplay = document.getElementById('outputDisplay');
+        this.editor = null;
         
         this.initializeEventListeners();
+        this.initializeMonacoEditor();
     }
 
     initializeEventListeners() {
@@ -20,6 +22,33 @@ export class FileHandler {
         this.dropZone.addEventListener('drop', this.handleDrop.bind(this));
         this.uploadButton.addEventListener('click', () => this.fileInput.click());
         this.fileInput.addEventListener('change', (e) => this.handleFiles(e.target.files));
+    }
+
+    async initializeMonacoEditor() {
+        try {
+            await new Promise((resolve, reject) => {
+                require(['vs/editor/editor.main'], (monaco) => {
+                    this.editor = monaco.editor.create(this.contentDisplay, {
+                        value: '',
+                        language: 'python',
+                        theme: document.body.classList.contains('dark-theme') ? 'vs-dark' : 'vs',
+                        automaticLayout: true,
+                        minimap: { enabled: false },
+                        scrollBeyondLastLine: false,
+                        fontSize: 14,
+                        lineNumbers: 'on',
+                        renderWhitespace: 'selection',
+                        tabSize: 4,
+                        wordWrap: 'on'
+                    });
+                    resolve();
+                }, reject);
+            });
+        } catch (error) {
+            console.error('Failed to initialize Monaco Editor:', error);
+            // Fallback to basic text display
+            this.contentDisplay.innerHTML = '<div class="error">Failed to load code editor. Using basic text display.</div>';
+        }
     }
 
     handleDragOver(e) {
@@ -101,8 +130,13 @@ export class FileHandler {
     }
 
     async displayPython(content) {
-        this.contentDisplay.innerHTML = `<pre><code class="language-python">${content}</code></pre>`;
-        hljs.highlightAll();
+        if (this.editor) {
+            this.editor.setValue(content);
+            this.editor.updateOptions({ language: 'python' });
+        } else {
+            this.contentDisplay.innerHTML = `<pre><code class="language-python">${content}</code></pre>`;
+            hljs.highlightAll();
+        }
         
         if (window.pyodide) {
             try {
