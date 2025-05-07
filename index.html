@@ -12,41 +12,69 @@
     <!-- Highlight.js for code syntax highlighting -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/default.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+    <!-- Monaco Editor for code editing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.36.1/min/vs/loader.min.js"></script>
 </head>
 <body class="light-theme">
     <header>
         <h1>Code Viewer & Executor</h1>
         <div class="controls">
-            <button id="themeToggle">Toggle Theme</button>
-            <button id="saveButton">Save Files</button>
+            <button id="themeToggle" aria-label="Toggle theme" title="Switch to dark mode">Toggle Theme</button>
+            <button id="saveButton" aria-label="Save files">Save Files</button>
+            <button id="clearButton" aria-label="Clear all files">Clear All</button>
         </div>
     </header>
 
     <main>
         <div class="file-input-container">
-            <div id="dropZone" class="drop-zone">
+            <div id="dropZone" class="drop-zone" role="region" aria-label="File drop zone">
                 <p>Drag and drop files here or</p>
-                <input type="file" id="fileInput" multiple accept=".ipynb,.py,.md">
+                <input type="file" id="fileInput" multiple accept=".ipynb,.py,.md" aria-label="Choose files">
                 <button id="uploadButton">Choose Files</button>
             </div>
             <div class="github-import">
-                <input type="text" id="githubUrl" placeholder="Enter GitHub file URL">
+                <input type="text" id="githubUrl" placeholder="Enter GitHub file URL" aria-label="GitHub URL">
                 <button id="importButton">Import from GitHub</button>
             </div>
         </div>
 
         <div class="content-container">
-            <div class="file-list">
+            <nav class="file-list" role="navigation" aria-label="File list">
                 <h2>Files</h2>
-                <ul id="fileList"></ul>
-            </div>
-            <div class="file-content">
+                <ul id="fileList" role="list"></ul>
+            </nav>
+            <main class="file-content" role="main">
                 <div id="contentDisplay"></div>
-                <div id="outputDisplay" class="output-container"></div>
-            </div>
+                <div id="outputDisplay" class="output-container" role="region" aria-label="Code output"></div>
+            </main>
         </div>
     </main>
 
-    <script src="script.js"></script>
+    <!-- Loading indicator -->
+    <div id="loadingIndicator" class="loading-indicator" hidden>
+        <div class="spinner"></div>
+        <p>Loading...</p>
+    </div>
+
+    <!-- Confirmation modal template -->
+    <template id="confirmationModal">
+        <div class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3></h3>
+                    <button class="close-button" aria-label="Close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p></p>
+                </div>
+                <div class="modal-footer">
+                    <button class="confirm-button">Confirm</button>
+                    <button class="cancel-button">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <script type="module" src="script.js"></script>
 </body>
 </html> 

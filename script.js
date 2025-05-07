@@ -1,9 +1,27 @@
+import { FileHandler } from './js/file-handler.js';
+import { GitHubImporter } from './js/github-import.js';
+import { Storage } from './js/storage.js';
+
 // Initialize Pyodide
 let pyodide = null;
 async function initPyodide() {
     pyodide = await loadPyodide();
+    window.pyodide = pyodide; // Make pyodide globally available
     console.log('Pyodide loaded successfully');
 }
+
+// Initialize application
+async function initApp() {
+    const fileHandler = new FileHandler();
+    const githubImporter = new GitHubImporter(fileHandler);
+    const storage = new Storage(fileHandler);
+    
+    // Initialize Pyodide
+    await initPyodide();
+}
+
+// Start the application
+initApp();
 
 // Theme management
 const themeToggle = document.getElementById('themeToggle');
@@ -191,7 +209,4 @@ if (savedFiles) {
     Object.entries(filesObj).forEach(([name, content]) => {
         addFile(name, content);
     });
-}
-
-// Initialize Pyodide
-initPyodide(); 
+} 
