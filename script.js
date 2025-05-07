@@ -3,21 +3,44 @@ import { GitHubImporter } from './js/github-import.js';
 import { Storage } from './js/storage.js';
 
 // Initialize Pyodide
-let pyodide = null;
 async function initPyodide() {
-    pyodide = await loadPyodide();
-    window.pyodide = pyodide; // Make pyodide globally available
-    console.log('Pyodide loaded successfully');
+    try {
+        window.pyodide = await loadPyodide({
+            indexURL: "https://cdn.jsdelivr.net/pyodide/v0.24.1/full/",
+            fullStdLib: true,
+            stdout: (msg) => {
+                const outputDisplay = document.getElementById('outputDisplay');
+                if (outputDisplay) {
+                    outputDisplay.textContent += msg;
+                }
+            },
+            stderr: (msg) => {
+                const outputDisplay = document.getElementById('outputDisplay');
+                if (outputDisplay) {
+                    outputDisplay.textContent += `Error: ${msg}`;
+                }
+            }
+        });
+        console.log('Pyodide loaded successfully');
+    } catch (error) {
+        console.error('Failed to load Pyodide:', error);
+        const outputDisplay = document.getElementById('outputDisplay');
+        if (outputDisplay) {
+            outputDisplay.textContent = 'Failed to load Python environment. Some features may be limited.';
+        }
+    }
 }
 
 // Initialize application
 async function initApp() {
-    const fileHandler = new FileHandler();
-    const githubImporter = new GitHubImporter(fileHandler);
-    const storage = new Storage(fileHandler);
-    
-    // Initialize Pyodide
-    await initPyodide();
+    try {
+        await initPyodide();
+        const fileHandler = new FileHandler();
+        const githubImporter = new GitHubImporter(fileHandler);
+        const storage = new Storage();
+    } catch (error) {
+        console.error('Failed to initialize app:', error);
+    }
 }
 
 // Start the application
